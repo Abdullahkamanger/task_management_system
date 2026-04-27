@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { Toaster } from 'sonner'
+import Sidebar from '@/components/SideBar'
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,12 +24,20 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+ return (
+    <html lang="en" className="h-full antialiased dark">
+      <body className="h-full flex overflow-hidden bg-[#1d1d1d]">
+        <Toaster richColors position="top-right" />
+        
+        {/* Sidebar stays fixed */}
+        <Sidebar />
+
+        {/* This main area is what scrolls/changes */}
+        <main className="flex-1 relative flex flex-col overflow-hidden">
+          {children}
+        </main>
+        
+      </body>
     </html>
   );
 }

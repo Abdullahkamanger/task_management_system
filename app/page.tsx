@@ -1,63 +1,41 @@
-import Image from "next/image";
+import connectDB from '@/lib/mongodb';
+import Task from '@/models/Task';
+import TaskCard from '@/components/TaskCard';
+import TaskColumn from '@/components/TaskColumn';
+// app/page.tsx
+export default async function Home() {
+  await connectDB();
+  const tasks = await Task.find({}).sort({ createdAt: -1 }).lean();
+  const serializedTasks = tasks.map((task: any) => ({
+    ...task,
+    _id: task._id?.toString(),
+    userId: task.userId?.toString?.(),
+    createdAt: task.createdAt?.toISOString?.(),
+    updatedAt: task.updatedAt?.toISOString?.(),
+  }));
 
-export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+    // Change: Full height, flex-row to allow for a sidebar later
+    <div className="flex h-screen bg-[#1d1d1d] overflow-hidden text-gray-200">
+      
+      {/* Workspace Content */}
+      <main className="flex-1 flex flex-col p-6 overflow-x-auto">
+        <header className="mb-8">
+          <h1 className="text-2xl font-bold">My Workspace</h1>
+        </header>
+
+        {/* Board Area: This is where Trello lives */}
+        <div className="flex gap-6 h-full items-start">
+          
+          {/* Column: To Do */}
+          <TaskColumn
+            key={serializedTasks.map((task: any) => task._id).join('|')}
+            title="To Do"
+            initialTasks={serializedTasks}
+          />
+          
+
+          {/* You can add "In Progress" or "Done" columns here easily now! */}
         </div>
       </main>
     </div>
