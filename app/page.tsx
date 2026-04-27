@@ -1,15 +1,21 @@
 import connectDB from '@/lib/mongodb';
 import Task from '@/models/Task';
-import TaskCard from '@/components/TaskCard';
 import TaskColumn from '@/components/TaskColumn';
-// app/page.tsx
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+
 export default async function Home() {
+  const session = await auth();
+
+  if (!session) redirect("/login");
+
   await connectDB();
-  const tasks = await Task.find({}).sort({ createdAt: -1 }).lean();
+  
+  const tasks = await Task.find({ userId: session.user?.id }).populate('userId').sort({ createdAt: -1 }).lean();
   const serializedTasks = tasks.map((task: any) => ({
     ...task,
     _id: task._id?.toString(),
-    userId: task.userId?.toString?.(),
+    userId: task.userId?._id ? task.userId._id.toString() : task.userId?.toString?.(),
     createdAt: task.createdAt?.toISOString?.(),
     updatedAt: task.updatedAt?.toISOString?.(),
   }));
