@@ -1,11 +1,11 @@
 'use client';
 import { useState, type FormEvent } from 'react';
-import { Reorder, AnimatePresence } from 'framer-motion';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
 import { Plus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { createTask } from '@/lib/actions';
-import TaskCard from './TaskCard';
+import SortableTaskCard from './SortableTaskCard';
 
 type Task = {
   _id: string;
@@ -13,15 +13,23 @@ type Task = {
   description?: string;
   priority?: string;
   completed: boolean;
+  column: string;
+  order: number;
 };
 
-export default function TaskColumn({ title, initialTasks }: { title: string, initialTasks: Task[] }) {
-  const [tasks, setTasks] = useState(initialTasks);
+export default function TaskColumn({ title, tasks }: { title: string, tasks: Task[] }) {
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
   const [newPriority, setNewPriority] = useState<'low' | 'medium' | 'high'>('medium');
-  const router = useRouter();
+
+  const { setNodeRef } = useDroppable({
+    id: title,
+    data: {
+      type: 'Column',
+      title,
+    },
+  });
 
   async function handleAddTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,6 +38,7 @@ export default function TaskColumn({ title, initialTasks }: { title: string, ini
     formData.set('title', newTitle);
     formData.set('description', newDescription);
     formData.set('priority', newPriority);
+    formData.set('column', title);
 
     try {
       await createTask(formData);
@@ -38,40 +47,31 @@ export default function TaskColumn({ title, initialTasks }: { title: string, ini
       setNewDescription('');
       setNewPriority('medium');
       toast.success('Task added');
-      router.refresh();
     } catch (error) {
       console.error('Failed to add task', error);
       toast.error('Unable to add task');
     }
   }
 
+  const taskIds = tasks.map(t => t._id);
+
   return (
-    <div className="w-80 bg-[#101204]/50 rounded-xl p-3 flex flex-col max-h-full border border-white/5">
+    <div 
+      ref={setNodeRef}
+      className="w-80 shrink-0 bg-[#101204]/50 rounded-xl p-3 flex flex-col max-h-full border border-white/5"
+    >
       <div className="flex items-center justify-between mb-4 px-2">
         <h2 className="font-semibold text-xs uppercase tracking-wider text-gray-400">{title}</h2>
         <span className="text-xs text-gray-500">{tasks.length}</span>
       </div>
 
-      <Reorder.Group 
-        axis="y" 
-        values={tasks} 
-        onReorder={setTasks} 
-        className="space-y-3 overflow-y-auto custom-scrollbar pr-1"
-      >
-        <AnimatePresence mode="popLayout">
+      <div className="space-y-3 overflow-y-auto custom-scrollbar pr-1 min-h-[100px]">
+        <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
-            <Reorder.Item 
-              key={task._id} 
-              value={task}
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-            >
-              <TaskCard task={task} />
-            </Reorder.Item>
+            <SortableTaskCard key={task._id} task={task} />
           ))}
-        </AnimatePresence>
-      </Reorder.Group>
+        </SortableContext>
+      </div>
 
       <div className="mt-4 pt-4 border-t border-white/5">
         {isAdding ? (

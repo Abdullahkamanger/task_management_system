@@ -44,11 +44,13 @@ export async function createTask(formData: FormData) {
   const title = formData.get('title');
   const description = formData.get('description');
   const priority = formData.get('priority');
+  const column = formData.get('column') || 'To Do';
 
   await Task.create({
     title,
     description,
     priority,
+    column,
     userId: session.user.id,
   });
 
@@ -87,3 +89,46 @@ export async function updateTaskDescription(id: string, description: string) {
   await Task.findOneAndUpdate({ _id: id, userId: session.user.id }, { description });
   revalidatePath('/');
 }
+
+export async function addColumn(name: string) {
+  const session = await auth();
+  if (!session || !session.user) return;
+  
+  await connectDB();
+  await User.findByIdAndUpdate(session.user.id, {
+    $addToSet: { columns: name } // Prevent duplicate column names
+  });
+  revalidatePath('/');
+}
+
+export async function updateTaskStatus(taskId: string, newColumn: string) {
+  await connectDB();
+  await Task.findByIdAndUpdate(taskId, { column: newColumn });
+  revalidatePath('/');
+}
+
+export async function toggleTaskComplete(taskId: string, completed: boolean) {
+  await connectDB();
+  await Task.findByIdAndUpdate(taskId, { completed });
+  revalidatePath('/');
+}
+
+export async function updateTaskOrders(updates: { id: string, column: string, order: number }[]) {
+  const session = await auth();
+  if (!session || !session.user) return;
+  
+  await connectDB();
+  
+  const bulkOps = updates.map(update => ({
+    updateOne: {
+      filter: { _id: update.id, userId: session.user.id },
+      update: { $set: { column: update.column, order: update.order } }
+    }
+  }));
+
+  if (bulkOps.length > 0) {
+    await Task.bulkWrite(bulkOps);
+  }
+  revalidatePath('/');
+}
+

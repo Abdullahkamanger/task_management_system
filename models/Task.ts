@@ -31,6 +31,14 @@ const TaskSchema = new mongoose.Schema({
         enum:['low','medium','high'],
         default:'medium'
     },
+    column: { 
+        type: String, 
+        default: 'To Do' 
+    },
+    order: {
+        type: Number,
+        default: 0
+    },
     userId:{
         type:mongoose.Schema.Types.ObjectId,
         ref:'User',

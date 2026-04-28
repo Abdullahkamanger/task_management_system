@@ -1,10 +1,10 @@
 'use client'; // This tells Next.js: "This is interactive!"
 
 import { motion } from 'framer-motion';
-import { Trash2 } from 'lucide-react';
+import { Trash2, CheckCircle2, Circle } from 'lucide-react';
 import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { deleteTask, updateTaskTitle, updateTaskDescription } from '@/lib/actions';
+import { deleteTask, updateTaskTitle, updateTaskDescription, toggleTaskComplete } from '@/lib/actions';
 import { toast } from 'sonner'
 
 // components/TaskCard.tsx
@@ -27,6 +27,17 @@ export default function TaskCard({ task }: { task: any }) {
       toast.error('Failed to delete task');
     }
   }
+
+  const handleToggle = () => {
+    startTransition(async () => {
+      try {
+        await toggleTaskComplete(task._id, !task.completed);
+        toast.success(task.completed ? "Task uncompleted" : "Task marked as done");
+      } catch (e) {
+        toast.error("Failed to update task");
+      }
+    });
+  };
 
   // Debounced Save for Title
   useEffect(() => {
@@ -58,7 +69,7 @@ export default function TaskCard({ task }: { task: any }) {
     <motion.div
       layout
       whileHover={{ y: -2 }}
-      className="bg-[#22272b] p-4 rounded-lg shadow-md border border-white/5 hover:border-white/20 transition-all group"
+      className={`bg-[#22272b] p-4 rounded-lg shadow-md border ${task.completed ? 'border-green-500/30' : 'border-white/5 hover:border-white/20'} transition-all group`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
@@ -67,42 +78,52 @@ export default function TaskCard({ task }: { task: any }) {
             {task.priority}
           </div>
           
-          {/* Title */}
-          {editingField === 'title' ? (
-            <input
-              autoFocus
-              className="bg-black/20 border border-blue-500/50 rounded focus:ring-1 focus:ring-blue-500 p-1 w-full text-sm font-medium text-blue-400 outline-none"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onBlur={() => setEditingField(null)}
-              onKeyDown={(e) => { if (e.key === 'Enter') setEditingField(null); }}
-            />
-          ) : (
-            <h3
-              onClick={() => setEditingField('title')}
-              className="text-sm font-medium text-gray-100 cursor-text hover:bg-white/5 rounded p-1 -ml-1 transition-colors"
-            >
-              {title}
-            </h3>
-          )}
+          <div className="flex gap-3">
+            <button onClick={handleToggle} disabled={isPending} className="mt-0.5 shrink-0">
+              {task.completed ? 
+                <CheckCircle2 size={18} className="text-green-500" /> : 
+                <Circle size={18} className="text-gray-500 hover:text-blue-400" />
+              }
+            </button>
+            <div className="flex-1 min-w-0">
+              {/* Title */}
+              {editingField === 'title' ? (
+                <input
+                  autoFocus
+                  className="bg-black/20 border border-blue-500/50 rounded focus:ring-1 focus:ring-blue-500 p-1 w-full text-sm font-medium text-blue-400 outline-none"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  onBlur={() => setEditingField(null)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') setEditingField(null); }}
+                />
+              ) : (
+                <h3
+                  onClick={() => setEditingField('title')}
+                  className={`text-sm font-medium cursor-text hover:bg-white/5 rounded p-1 -ml-1 transition-colors ${task.completed ? 'line-through text-gray-500' : 'text-gray-100'}`}
+                >
+                  {title}
+                </h3>
+              )}
 
-          {/* Description */}
-          {editingField === 'description' ? (
-            <textarea
-              autoFocus
-              className="bg-black/20 border border-blue-500/50 rounded focus:ring-1 focus:ring-blue-500 p-1 mt-2 w-full text-xs font-medium text-blue-400 outline-none min-h-[60px] resize-none"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              onBlur={() => setEditingField(null)}
-            />
-          ) : (
-            <p
-              onClick={() => setEditingField('description')}
-              className="text-xs text-gray-500 mt-2 line-clamp-2 cursor-text hover:bg-white/5 rounded p-1 -ml-1 transition-colors min-h-[24px]"
-            >
-              {description || 'Click to add a description...'}
-            </p>
-          )}
+              {/* Description */}
+              {editingField === 'description' ? (
+                <textarea
+                  autoFocus
+                  className="bg-black/20 border border-blue-500/50 rounded focus:ring-1 focus:ring-blue-500 p-1 mt-2 w-full text-xs font-medium text-blue-400 outline-none min-h-[60px] resize-none"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  onBlur={() => setEditingField(null)}
+                />
+              ) : (
+                <p
+                  onClick={() => setEditingField('description')}
+                  className={`text-xs mt-2 line-clamp-2 cursor-text hover:bg-white/5 rounded p-1 -ml-1 transition-colors min-h-[24px] ${task.completed ? 'text-gray-600' : 'text-gray-500'}`}
+                >
+                  {description || 'Click to add a description...'}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
         <div>
           <button

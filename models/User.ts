@@ -13,6 +13,10 @@ const UserSchema = new mongoose.Schema({
     password:{
         type:String,
         required:true
+    },
+    columns: {
+        type: [String],
+        default: ['To Do', 'In Progress', 'Done']
     }
 },{timestamps:true});
 // mongoose.models.user important for hot relaoding in next js
