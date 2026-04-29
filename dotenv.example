@@ -1,0 +1,4 @@
+MONGO_URI=mongodb://localhost:27017/task_app
+AUTH_SECRET=740f95a1a28d9627556acec0d9c44ed0567aa69317ddbbbb3927759a65cc7ea7
+
+GEMINI_API_KEY=
