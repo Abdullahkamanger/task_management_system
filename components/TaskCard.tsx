@@ -22,7 +22,7 @@ export default function TaskCard({ task }: { task: any }) {
     const toastId = toast.loading("AI is analyzing the task...");
     
     try {
-      const subtasks = await generateSubtasks(task.title);
+      const subtasks = await generateSubtasks(task.title, task.description || '');
       
       if (!subtasks || subtasks.length === 0) {
         toast.error("AI couldn't generate sub-tasks", { id: toastId });

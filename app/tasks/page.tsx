@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import connectDB from "@/lib/mongodb";
 import Task from "@/models/Task";
 import TaskCard from "@/components/TaskCard";
-import InlineTaskCreator from "@/components/InlineTaskCreator";
+import MagicTaskInput from "@/components/MagicTaskInput";
 import { CheckSquare, Calendar, AlertCircle, Clock } from 'lucide-react';
 
 export default async function MyTasksPage() {
@@ -52,8 +52,8 @@ export default async function MyTasksPage() {
           <p className="text-gray-500">Manage all your personal tasks across the workspace.</p>
         </header>
 
-        <div className="mb-8">
-          <InlineTaskCreator placeholder="Quickly add a task to your list..." className="max-w-md" />
+        <div className="mb-10">
+          <MagicTaskInput />
         </div>
 
         <div className="space-y-12">

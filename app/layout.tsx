@@ -29,14 +29,14 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className="h-full antialiased dark">
-      <body className="h-full flex overflow-hidden bg-[#1d1d1d]">
+      <body className="h-full flex overflow-hidden bg-[#1d1d1d]" suppressHydrationWarning>
         <Toaster richColors position="top-right" />
         
         {/* Sidebar stays fixed, only shown if logged in */}
         {session && <Sidebar user={session.user} />}
 
         {/* This main area is what scrolls/changes */}
-        <main className="flex-1 relative flex flex-col overflow-hidden">
+        <main className="flex-1 relative flex flex-col p-6 overflow-y-auto custom-scrollbar">
           {children}
         </main>
         

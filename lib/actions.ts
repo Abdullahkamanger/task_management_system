@@ -33,7 +33,7 @@ export async function registerUser(formData: FormData) {
   }
 }
 
-export async function createTask(formData: FormData) {
+export async function createTask(data: FormData | { title: string, description?: string, priority?: string, column?: string, dueDate?: string | null }) {
   const session = await auth();
   if (!session || !session.user) {
     throw new Error("You must be logged in to create a task.");
@@ -41,11 +41,21 @@ export async function createTask(formData: FormData) {
 
   await connectDB();
 
-  const title = formData.get('title');
-  const description = formData.get('description');
-  const priority = formData.get('priority');
-  const column = formData.get('column') || 'To Do';
-  const dueDate = formData.get('dueDate');
+  let title, description, priority, column, dueDate;
+
+  if (data instanceof FormData) {
+    title = data.get('title');
+    description = data.get('description');
+    priority = data.get('priority');
+    column = data.get('column') || 'To Do';
+    dueDate = data.get('dueDate');
+  } else {
+    title = data.title;
+    description = data.description;
+    priority = data.priority || 'medium';
+    column = data.column || 'To Do';
+    dueDate = data.dueDate;
+  }
 
   await Task.create({
     title,

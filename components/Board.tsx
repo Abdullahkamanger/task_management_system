@@ -180,14 +180,14 @@ export default function Board({ initialColumns, initialTasks }: { initialColumns
   };
 
   return (
-    <div className="flex gap-6 h-full items-start pb-4">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={handleDragStart}
-        onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
-      >
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCorners}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragEnd={handleDragEnd}
+    >
+      <div className="flex gap-6 h-full items-start pb-4">
         {columns.map((col) => (
           <TaskColumn
             key={col.name}
@@ -195,12 +195,12 @@ export default function Board({ initialColumns, initialTasks }: { initialColumns
             tasks={tasks.filter(t => t.column === col.name || (!t.column && col.name === 'To Do'))}
           />
         ))}
+        <AddColumn />
+      </div>
 
-        <DragOverlay dropAnimation={dropAnimation}>
-          {activeTask ? <TaskCard task={activeTask} /> : null}
-        </DragOverlay>
-      </DndContext>
-      <AddColumn />
+      <DragOverlay dropAnimation={dropAnimation}>
+        {activeTask ? <TaskCard task={activeTask} /> : null}
+      </DragOverlay>
 
       <ConfirmationModal
         isOpen={showModal}
@@ -212,6 +212,6 @@ export default function Board({ initialColumns, initialTasks }: { initialColumns
         cancelText="Keep Original Date"
         type="warning"
       />
-    </div>
+    </DndContext>
   );
 }
