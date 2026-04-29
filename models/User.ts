@@ -15,8 +15,15 @@ const UserSchema = new mongoose.Schema({
         required:true
     },
     columns: {
-        type: [String],
-        default: ['To Do', 'In Progress', 'Done']
+        type: [{
+            name: { type: String, required: true },
+            dueDate: { type: Date }
+        }],
+        default: [
+            { name: 'To Do' },
+            { name: 'In Progress' },
+            { name: 'Done' }
+        ]
     }
 },{timestamps:true});
 // mongoose.models.user important for hot relaoding in next js

@@ -18,7 +18,9 @@ import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import TaskColumn from './TaskColumn';
 import TaskCard from './TaskCard';
 import AddColumn from './AddColumn';
-import { updateTaskOrders } from '@/lib/actions';
+import ConfirmationModal from './ConfirmationModal';
+import { updateTaskOrders, updateTaskDate } from '@/lib/actions';
+import { toast } from 'sonner';
 
 type Task = {
   _id: string;
@@ -28,15 +30,29 @@ type Task = {
   completed: boolean;
   column: string;
   order: number;
+  dueDate?: string;
 };
 
-export default function Board({ initialColumns, initialTasks }: { initialColumns: string[], initialTasks: Task[] }) {
+type Column = {
+  name: string;
+  dueDate?: string;
+};
+
+export default function Board({ initialColumns, initialTasks }: { initialColumns: Column[], initialTasks: Task[] }) {
   const [columns, setColumns] = useState(initialColumns);
   const [tasks, setTasks] = useState(initialTasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  
+  // Constraint Modal State
+  const [showModal, setShowModal] = useState(false);
+  const [pendingUpdate, setPendingUpdate] = useState<{ taskId: string, newDate: string } | null>(null);
 
   useEffect(() => {
-    setColumns(initialColumns);
+    if (initialColumns.length > 0 && typeof initialColumns[0] === 'string') {
+        setColumns((initialColumns as any).map((c: string) => ({ name: c })));
+    } else {
+        setColumns(initialColumns);
+    }
   }, [initialColumns]);
 
   useEffect(() => {
@@ -84,7 +100,7 @@ export default function Board({ initialColumns, initialTasks }: { initialColumns
           const newTasks = [...prev];
           newTasks[activeIndex] = {
             ...newTasks[activeIndex],
-            column: newTasks[overIndex].column,
+            column: prev[overIndex].column,
           };
           return arrayMove(newTasks, activeIndex, overIndex);
         }
@@ -119,10 +135,24 @@ export default function Board({ initialColumns, initialTasks }: { initialColumns
 
   const handleDragEnd = (event: DragEndEvent) => {
     setActiveTask(null);
-    const { over } = event;
+    const { active, over } = event;
     if (!over) return;
 
-    // Use the latest tasks state from the ref to ensure we don't revert optimistic updates
+    const task = tasks.find(t => t._id === active.id);
+    const targetColumnName = over.data.current?.type === 'Column' ? over.id : over.data.current?.title;
+    const targetColumn = columns.find(c => c.name === targetColumnName);
+
+    // Check Constraints
+    if (task && targetColumn?.dueDate && task.dueDate) {
+      const taskDate = new Date(task.dueDate);
+      const colDate = new Date(targetColumn.dueDate);
+      
+      if (taskDate < colDate) {
+        setPendingUpdate({ taskId: task._id, newDate: targetColumn.dueDate });
+        setShowModal(true);
+      }
+    }
+
     const updatedTasks = latestTasks.current.map((t, index) => ({
       ...t,
       order: index
@@ -133,6 +163,17 @@ export default function Board({ initialColumns, initialTasks }: { initialColumns
     const updates = updatedTasks.map(t => ({ id: t._id, column: t.column, order: t.order }));
     updateTaskOrders(updates).catch(console.error);
   };
+
+  async function confirmDateUpdate() {
+    if (!pendingUpdate) return;
+    try {
+      await updateTaskDate(pendingUpdate.taskId, pendingUpdate.newDate);
+      toast.success('Task date updated to match column deadline');
+    } catch (e) {
+      toast.error('Failed to update task date');
+    }
+    setPendingUpdate(null);
+  }
 
   const dropAnimation = {
     sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: '0.4' } } }),
@@ -147,11 +188,11 @@ export default function Board({ initialColumns, initialTasks }: { initialColumns
         onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
-        {columns.map((colName) => (
+        {columns.map((col) => (
           <TaskColumn
-            key={colName}
-            title={colName}
-            tasks={tasks.filter(t => t.column === colName || (!t.column && colName === 'To Do'))}
+            key={col.name}
+            column={col}
+            tasks={tasks.filter(t => t.column === col.name || (!t.column && col.name === 'To Do'))}
           />
         ))}
 
@@ -160,6 +201,17 @@ export default function Board({ initialColumns, initialTasks }: { initialColumns
         </DragOverlay>
       </DndContext>
       <AddColumn />
+
+      <ConfirmationModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onConfirm={confirmDateUpdate}
+        title="Schedule Conflict"
+        message="You are moving a task that has a due date earlier than this column's deadline. Would you like to update the task's due date to match the column's?"
+        confirmText="Update & Move"
+        cancelText="Keep Original Date"
+        type="warning"
+      />
     </div>
   );
 }
