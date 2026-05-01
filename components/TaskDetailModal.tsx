@@ -15,9 +15,9 @@ import {
   User as UserIcon,
   Sparkles
 } from 'lucide-react';
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { deleteTask, toggleTaskComplete, updateTaskDescription } from '@/lib/actions';
+import { deleteTask, toggleTaskComplete, updateTaskDescription, createTask } from '@/lib/actions';
 import { toast } from 'sonner';
 
 interface Task {
@@ -43,6 +43,13 @@ export default function TaskDetailModal({ task, subtasks, isOpen, onClose }: Tas
   const [isPending, startTransition] = useTransition();
   const [description, setDescription] = useState(task.description || '');
   const [isEditingDesc, setIsEditingDesc] = useState(false);
+
+  useEffect(() => {
+    setDescription(task.description || '');
+  }, [task.description]);
+
+  const [isAddingSubtask, setIsAddingSubtask] = useState(false);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
 
   const completedSubtasks = subtasks.filter(s => s.completed).length;
   const progress = subtasks.length > 0 ? (completedSubtasks / subtasks.length) * 100 : 0;
@@ -145,6 +152,7 @@ export default function TaskDetailModal({ task, subtasks, isOpen, onClose }: Tas
                         autoFocus
                         value={description}
                         onChange={(e) => setDescription(e.target.value)}
+                        onKeyDown={(e) => e.stopPropagation()}
                         placeholder="Add a more detailed description..."
                         className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-sm text-gray-300 focus:ring-1 focus:ring-blue-500 outline-none min-h-[120px] resize-none"
                       />
@@ -217,10 +225,62 @@ export default function TaskDetailModal({ task, subtasks, isOpen, onClose }: Tas
                       </div>
                     ))}
                     
-                    <button className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 px-2 py-2 w-full transition-colors">
-                      <Plus size={16} />
-                      Add an item
-                    </button>
+                    {isAddingSubtask ? (
+                      <form 
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          if (!newSubtaskTitle.trim()) return;
+                          startTransition(async () => {
+                            try {
+                              await createTask({
+                                title: newSubtaskTitle.trim(),
+                                column: task.column,
+                                description: `Sub-task for: ${task.title}`,
+                                parentId: task._id,
+                              });
+                              setNewSubtaskTitle('');
+                              setIsAddingSubtask(false);
+                              router.refresh();
+                              toast.success('Subtask added');
+                            } catch (err) {
+                              toast.error('Failed to add subtask');
+                            }
+                          });
+                        }}
+                        className="flex items-center gap-2 px-2 py-1"
+                      >
+                        <input
+                          autoFocus
+                          value={newSubtaskTitle}
+                          onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          placeholder="Subtask title..."
+                          className="flex-1 bg-black/20 border border-white/10 rounded-md px-2 py-1.5 text-sm text-gray-200 placeholder:text-gray-600 outline-none focus:border-blue-500/50"
+                        />
+                        <button
+                          type="submit"
+                          disabled={isPending || !newSubtaskTitle.trim()}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-md disabled:opacity-50"
+                        >
+                          Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setIsAddingSubtask(false); setNewSubtaskTitle(''); }}
+                          className="p-1.5 text-gray-500 hover:text-white rounded transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </form>
+                    ) : (
+                      <button 
+                        onClick={() => setIsAddingSubtask(true)}
+                        className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 px-2 py-2 w-full transition-colors"
+                      >
+                        <Plus size={16} />
+                        Add an item
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -251,18 +311,18 @@ export default function TaskDetailModal({ task, subtasks, isOpen, onClose }: Tas
                 <div>
                   <h4 className="text-[10px] uppercase font-bold text-gray-500 mb-2 tracking-widest">Actions</h4>
                   <div className="flex flex-col gap-2">
-                    <button className="flex items-center gap-2 w-full px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-sm transition-all group">
+                    {/* <button className="flex items-center gap-2 w-full px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-sm transition-all group">
                       <UserIcon size={14} className="text-gray-500 group-hover:text-gray-300" />
                       Members
-                    </button>
-                    <button className="flex items-center gap-2 w-full px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-sm transition-all group">
+                    </button> */}
+                    {/* <button className="flex items-center gap-2 w-full px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-sm transition-all group">
                       <Paperclip size={14} className="text-gray-500 group-hover:text-gray-300" />
                       Attachment
-                    </button>
-                    <button className="flex items-center gap-2 w-full px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-sm transition-all group">
+                    </button> */}
+                    {/* <button className="flex items-center gap-2 w-full px-3 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg text-sm transition-all group">
                       <Sparkles size={14} className="text-purple-500 group-hover:text-purple-400" />
                       AI Optimization
-                    </button>
+                    </button> */}
                     <div className="pt-2 border-t border-white/5 mt-2">
                       <button 
                         onClick={async () => {

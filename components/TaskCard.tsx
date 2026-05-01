@@ -1,7 +1,7 @@
 'use client'; // This tells Next.js: "This is interactive!"
 
 import { motion } from 'framer-motion';
-import { Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, Sparkles } from 'lucide-react';
+import { Trash2, CheckCircle2, Circle, Calendar as CalendarIcon, Sparkles, CheckSquare } from 'lucide-react';
 import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteTask, updateTaskTitle, updateTaskDescription, toggleTaskComplete, createTask } from '@/lib/actions';
@@ -18,6 +18,15 @@ export default function TaskCard({ task, allTasks = [] }: { task: any, allTasks?
   const [description, setDescription] = useState(task.description || '');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Sync state with props when they change externally
+  useEffect(() => {
+    setTitle(task.title);
+  }, [task.title]);
+
+  useEffect(() => {
+    setDescription(task.description || '');
+  }, [task.description]);
 
   const subtasks = allTasks.filter(t => {
     const pId = t.parentId?.toString();
@@ -82,25 +91,6 @@ export default function TaskCard({ task, allTasks = [] }: { task: any, allTasks?
     });
   };
 
-  // Debounced Save for Title
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (title !== task.title && title.trim() !== '') {
-        updateTaskTitle(task._id, title).catch(() => toast.error('Failed to save title'));
-      }
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
-  }, [title, task._id, task.title]);
-
-  // Debounced Save for Description
-  useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (description !== (task.description || '')) {
-        updateTaskDescription(task._id, description).catch(() => toast.error('Failed to save description'));
-      }
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
-  }, [description, task._id, task.description]);
 
   const priorityColors = {
     high: "bg-red-500/20 text-red-400",
@@ -151,19 +141,32 @@ export default function TaskCard({ task, allTasks = [] }: { task: any, allTasks?
                   className="bg-black/20 border border-blue-500/50 rounded focus:ring-1 focus:ring-blue-500 p-1 w-full text-sm font-medium text-blue-400 outline-none"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  onBlur={() => setEditingField(null)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') setEditingField(null); }}
+                  onBlur={() => {
+                    setEditingField(null);
+                    if (title !== task.title && title.trim() !== '') {
+                      updateTaskTitle(task._id, title).catch(() => toast.error('Failed to save title'));
+                    }
+                  }}
+                  onKeyDown={(e) => { 
+                    e.stopPropagation();
+                    if (e.key === 'Enter') {
+                      setEditingField(null);
+                      if (title !== task.title && title.trim() !== '') {
+                        updateTaskTitle(task._id, title).catch(() => toast.error('Failed to save title'));
+                      }
+                    }
+                  }}
                 />
               ) : (
                 <h3 
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditingField('title');
-              }}
-              className={`font-semibold text-gray-100 mb-1 cursor-text hover:text-blue-400 transition-colors ${task.completed ? 'line-through text-gray-500' : ''}`}
-            >
-              {title}
-            </h3>
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingField('title');
+                  }}
+                  className={`text-sm font-semibold text-gray-100 mb-1 cursor-text hover:text-blue-400 transition-colors w-full ${task.completed ? 'line-through text-gray-500' : ''}`}
+                >
+                  {title}
+                </h3>
               )}
 
               {/* Description */}
@@ -173,18 +176,24 @@ export default function TaskCard({ task, allTasks = [] }: { task: any, allTasks?
                   className="bg-black/20 border border-blue-500/50 rounded focus:ring-1 focus:ring-blue-500 p-1 mt-2 w-full text-xs font-medium text-blue-400 outline-none min-h-[60px] resize-none"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  onBlur={() => setEditingField(null)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                  onBlur={() => {
+                    setEditingField(null);
+                    if (description !== (task.description || '')) {
+                      updateTaskDescription(task._id, description).catch(() => toast.error('Failed to save description'));
+                    }
+                  }}
                 />
               ) : (
                 <p 
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditingField('description');
-              }}
-              className="text-sm text-gray-400 line-clamp-2 cursor-text hover:text-gray-300 transition-colors"
-            >
-              {task.description || 'Click to add a description...'}
-            </p>
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingField('description');
+                  }}
+                  className="text-xs text-gray-400 line-clamp-2 cursor-text hover:text-gray-300 transition-colors w-full"
+                >
+                  {description || 'Add a description...'}
+                </p>
               )}
 
               {/* Due Date Badge */}
@@ -218,11 +227,11 @@ export default function TaskCard({ task, allTasks = [] }: { task: any, allTasks?
                   {subtasks.slice(0, 3).map((sub: any) => (
                     <div key={sub._id} className="flex items-center gap-2 text-xs">
                       <CheckSquare size={12} className={sub.completed ? 'text-green-500' : 'text-gray-600'} />
-                      <span className={`truncate ${sub.completed ? 'line-through text-gray-600' : 'text-gray-400'}`}>
+                      <span className={`flex-1 text-xs leading-relaxed whitespace-normal break-words ${sub.completed ? 'line-through text-gray-600' : 'text-gray-400'}`}>
                         {sub.title}
                       </span>
                     </div>
-                  ))}
+                  ))} 
                   {subtasks.length > 3 && (
                     <div className="text-[10px] text-gray-500 pl-5">+{subtasks.length - 3} more</div>
                   )}
@@ -270,4 +279,4 @@ export default function TaskCard({ task, allTasks = [] }: { task: any, allTasks?
     />
     </>
   );
-}
+}

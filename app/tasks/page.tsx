@@ -88,7 +88,7 @@ export default async function MyTasksPage() {
                 <div className="flex items-center gap-2 mb-4">
                   <section.icon size={18} className={section.color} />
                   <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400">
-                    {section.title} ({section.tasks.length})
+                    {section.title} ({section.tasks.filter((t: any) => !t.parentId).length})
                   </h2>
                 </div>
                 <div className="flex flex-col gap-4 pl-6">

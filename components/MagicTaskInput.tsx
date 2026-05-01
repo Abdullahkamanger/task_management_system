@@ -60,8 +60,8 @@ export default function MagicTaskInput() {
           )}
         </button>
       </div>
-      <p className="mt-2 text-[10px] text-gray-500 text-center uppercase tracking-[0.2em] font-medium opacity-50">
-        Powered by Gemini 3 Flash
+      <p className="mt-2 text-[10px] text-gray-200 text-center uppercase tracking-[0.2em] font-medium opacity-90">
+        Tasks will be Added in the "My Tasks" Section
       </p>
     </div>
   );

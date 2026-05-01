@@ -1,5 +1,5 @@
 'use client';
-import { useState, useTransition, type FormEvent } from 'react';
+import { useState, useTransition, useMemo, type FormEvent } from 'react';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { Plus, MoreVertical, Trash2, Calendar as CalendarIcon, Clock, X } from 'lucide-react';
@@ -31,6 +31,8 @@ export default function TaskColumn({ column, tasks, allTasks }: { column: Column
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isPending, startTransition] = useTransition();
 
+  const taskIds = useMemo(() => tasks.filter(t => !t.parentId).map((t) => t._id), [tasks]);
+
   // New Task form state
   const [newTitle, setNewTitle] = useState('');
   const [newDescription, setNewDescription] = useState('');
@@ -48,6 +50,19 @@ export default function TaskColumn({ column, tasks, allTasks }: { column: Column
   async function handleAddTask(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!newTitle.trim()) return;
+
+    // Validate: task due date must not exceed column due date
+    if (newDueDate && column.dueDate) {
+      const taskDate = new Date(newDueDate + 'T00:00:00');
+      const colDate = new Date(column.dueDate);
+      taskDate.setHours(0, 0, 0, 0);
+      colDate.setHours(0, 0, 0, 0);
+      
+      if (taskDate > colDate) {
+        toast.error(`Task due date cannot exceed the column deadline (${colDate.toLocaleDateString()}).`);
+        return;
+      }
+    }
 
     const formData = new FormData();
     formData.set('title', newTitle);
@@ -83,6 +98,27 @@ export default function TaskColumn({ column, tasks, allTasks }: { column: Column
   }
 
   function handleUpdateDate(date: string) {
+    // Validate: column due date must be >= the highest task due date in this column
+    if (date) {
+      const colDate = new Date(date + 'T00:00:00');
+      colDate.setHours(0, 0, 0, 0);
+      
+      const taskDates = tasks
+        .filter(t => t.dueDate && !t.parentId)
+        .map(t => {
+          const d = new Date(t.dueDate!);
+          d.setHours(0, 0, 0, 0);
+          return d;
+        });
+      
+      const maxTaskDate = taskDates.length > 0 ? new Date(Math.max(...taskDates.map(d => d.getTime()))) : null;
+      
+      if (maxTaskDate && colDate < maxTaskDate) {
+        toast.error(`Column deadline cannot be earlier than the latest task due date (${maxTaskDate.toLocaleDateString()}).`);
+        return;
+      }
+    }
+
     startTransition(async () => {
       try {
         await updateColumnDate(column.name, date || null);
@@ -93,7 +129,6 @@ export default function TaskColumn({ column, tasks, allTasks }: { column: Column
     });
   }
 
-  const taskIds = tasks.map(t => t._id);
 
   return (
     <div 
@@ -106,7 +141,7 @@ export default function TaskColumn({ column, tasks, allTasks }: { column: Column
           <div className="flex items-center gap-2">
             <h2 className="font-bold text-sm uppercase tracking-wider text-gray-200 truncate">{column.name}</h2>
             <span className="text-[10px] bg-white/5 text-gray-500 px-1.5 py-0.5 rounded-full font-bold">
-              {tasks.length}
+              {tasks.filter(t => !t.parentId).length}
             </span>
           </div>
           
@@ -173,6 +208,7 @@ export default function TaskColumn({ column, tasks, allTasks }: { column: Column
                 autoFocus
                 value={newTitle}
                 onChange={(event) => setNewTitle(event.target.value)}
+                onKeyDown={(e) => e.stopPropagation()}
                 placeholder="Task title"
                 required
                 className="w-full bg-black/20 border-none focus:ring-0 text-sm font-bold text-gray-100 placeholder:text-gray-600 rounded-lg p-2"
@@ -180,6 +216,7 @@ export default function TaskColumn({ column, tasks, allTasks }: { column: Column
               <textarea
                 value={newDescription}
                 onChange={(event) => setNewDescription(event.target.value)}
+                onKeyDown={(e) => e.stopPropagation()}
                 placeholder="Description (optional)"
                 className="w-full bg-black/10 border-none focus:ring-0 text-xs text-gray-400 placeholder:text-gray-600 rounded-lg p-2 min-h-[60px] resize-none"
               />

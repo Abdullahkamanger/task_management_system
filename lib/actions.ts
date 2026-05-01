@@ -33,7 +33,7 @@ export async function registerUser(formData: FormData) {
   }
 }
 
-export async function createTask(data: FormData | { title: string, description?: string, priority?: string, column?: string, dueDate?: string | null }) {
+export async function createTask(data: FormData | { title: string, description?: string, priority?: string, column?: string, dueDate?: string | null, parentId?: string | null }) {
   const session = await auth();
   if (!session || !session.user) {
     throw new Error("You must be logged in to create a task.");
@@ -56,7 +56,7 @@ export async function createTask(data: FormData | { title: string, description?:
     priority = data.priority || 'medium';
     column = data.column || 'To Do';
     dueDate = data.dueDate;
-    parentId = (data as any).parentId;
+    parentId = data.parentId;
   }
 
   await Task.create({
