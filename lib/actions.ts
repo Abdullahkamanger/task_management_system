@@ -237,9 +237,12 @@ export async function updateTaskOrders(updates: { id: string, column: string, or
   
   await connectDB();
   
+  // Extract userId into a variable so TypeScript knows it's defined within the closure
+  const userId = session.user.id;
+  
   const bulkOps = updates.map(update => ({
     updateOne: {
-      filter: { _id: update.id, userId: session.user.id },
+      filter: { _id: update.id, userId },
       update: { $set: { column: update.column, order: update.order } }
     }
   }));
@@ -247,9 +250,9 @@ export async function updateTaskOrders(updates: { id: string, column: string, or
   if (bulkOps.length > 0) {
     await Task.bulkWrite(bulkOps);
   }
+  
   revalidatePath('/');
   revalidatePath('/tasks');
   revalidatePath('/calendar');
   revalidatePath('/inbox');
 }
-
