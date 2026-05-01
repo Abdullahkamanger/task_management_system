@@ -3,14 +3,23 @@ import connectDB from "@/lib/mongodb";
 import Task from "@/models/Task";
 import TaskCard from "@/components/TaskCard";
 import MagicTaskInput from "@/components/MagicTaskInput";
-import { CheckSquare, Calendar, AlertCircle, Clock } from 'lucide-react';
+import InlineTaskCreator from "@/components/InlineTaskCreator";
+import { CheckSquare, Calendar, AlertCircle, Clock, Plus, Sparkles } from 'lucide-react';
 
 export default async function MyTasksPage() {
   const session = await auth();
   await connectDB();
   
   // Fetch all tasks for this user
-  const tasks = await Task.find({ userId: session?.user?.id }).sort({ createdAt: -1 }).lean();
+  const tasksRaw = await Task.find({ userId: session?.user?.id }).sort({ createdAt: -1 }).lean();
+  
+  const tasks = tasksRaw.map((t: any) => ({
+    ...JSON.parse(JSON.stringify(t)),
+    _id: t._id.toString(),
+    userId: t.userId.toString(),
+    parentId: t.parentId ? t.parentId.toString() : null,
+    dueDate: t.dueDate ? t.dueDate.toISOString() : undefined,
+  }));
 
   const now = new Date();
   now.setHours(0, 0, 0, 0);
@@ -30,7 +39,9 @@ export default async function MyTasksPage() {
   const upcoming = tasks.filter((t: any) => {
     if (!t.dueDate) return false;
     const d = new Date(t.dueDate);
-    return !isNaN(d.getTime()) && d > now;
+    if (isNaN(d.getTime())) return false;
+    d.setHours(0, 0, 0, 0);
+    return d.getTime() > now.getTime();
   });
   const noDate = tasks.filter((t: any) => {
     if (!t.dueDate) return true;
@@ -52,8 +63,22 @@ export default async function MyTasksPage() {
           <p className="text-gray-500">Manage all your personal tasks across the workspace.</p>
         </header>
 
-        <div className="mb-10">
-          <MagicTaskInput />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 px-1">
+              <Sparkles size={16} className="text-purple-400" />
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">AI Task Maker</h3>
+            </div>
+            <MagicTaskInput />
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 px-1">
+              <Plus size={16} className="text-blue-400" />
+              <h3 className="text-xs font-bold text-gray-500 uppercase tracking-widest">Manual Task Adder</h3>
+            </div>
+            <InlineTaskCreator className="!mb-0 h-[60px]" placeholder="Add task manually..." />
+          </div>
         </div>
 
         <div className="space-y-12">
@@ -66,10 +91,17 @@ export default async function MyTasksPage() {
                     {section.title} ({section.tasks.length})
                   </h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {section.tasks.map((task: any) => (
-                    <TaskCard key={task._id.toString()} task={JSON.parse(JSON.stringify(task))} />
-                  ))}
+                <div className="flex flex-col gap-4 pl-6">
+                  {(() => {
+                    const sectionTasks = section.tasks.filter((t: any) => !t.parentId);
+                    return sectionTasks.map((task: any) => (
+                      <TaskCard 
+                        key={task._id.toString()} 
+                        task={JSON.parse(JSON.stringify(task))} 
+                        allTasks={JSON.parse(JSON.stringify(tasks))} 
+                      />
+                    ));
+                  })()}
                 </div>
               </section>
             )

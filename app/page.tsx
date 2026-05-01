@@ -21,6 +21,7 @@ export default async function Home() {
     ...JSON.parse(JSON.stringify(task)),
     _id: task._id.toString(),
     userId: task.userId.toString(),
+    parentId: task.parentId ? task.parentId.toString() : null,
     dueDate: task.dueDate ? task.dueDate.toISOString() : undefined,
     createdAt: task.createdAt?.toISOString?.(),
     updatedAt: task.updatedAt?.toISOString?.(),

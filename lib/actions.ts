@@ -41,7 +41,7 @@ export async function createTask(data: FormData | { title: string, description?:
 
   await connectDB();
 
-  let title, description, priority, column, dueDate;
+  let title, description, priority, column, dueDate, parentId;
 
   if (data instanceof FormData) {
     title = data.get('title');
@@ -49,12 +49,14 @@ export async function createTask(data: FormData | { title: string, description?:
     priority = data.get('priority');
     column = data.get('column') || 'To Do';
     dueDate = data.get('dueDate');
+    parentId = data.get('parentId');
   } else {
     title = data.title;
     description = data.description;
     priority = data.priority || 'medium';
     column = data.column || 'To Do';
     dueDate = data.dueDate;
+    parentId = (data as any).parentId;
   }
 
   await Task.create({
@@ -63,7 +65,15 @@ export async function createTask(data: FormData | { title: string, description?:
     priority,
     column,
     userId: session.user.id,
-    dueDate: (dueDate && dueDate !== "") ? new Date(dueDate as string) : undefined,
+    parentId: parentId || null,
+    dueDate: (dueDate && dueDate !== "") ? (() => {
+      const dateStr = dueDate as string;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        return new Date(y, m - 1, d); // Parse as local date
+      }
+      return new Date(dateStr);
+    })() : undefined,
   });
 
   revalidatePath('/'); 
@@ -126,6 +136,7 @@ export async function addColumn(name: string) {
 }
 
 export async function deleteColumn(name: string) {
+  if (!name) return;
   const session = await auth();
   if (!session || !session.user) return;
 
@@ -184,13 +195,41 @@ export async function updateTaskStatus(taskId: string, newColumn: string) {
 }
 
 export async function toggleTaskComplete(taskId: string, completed: boolean) {
+  const session = await auth();
+  if (!session || !session.user) return;
+
   await connectDB();
-  await Task.findByIdAndUpdate(taskId, { completed });
+  const task = await Task.findOneAndUpdate(
+    { _id: taskId, userId: session.user.id },
+    { completed },
+    { new: true }
+  );
+
+  if (task) {
+    // Cascading: If parent is toggled, update all subtasks
+    await Task.updateMany(
+      { parentId: taskId, userId: session.user.id },
+      { completed }
+    );
+
+    // If subtask is toggled, check siblings and update parent
+    if (task.parentId) {
+      const allSiblings = await Task.find({ parentId: task.parentId, userId: session.user.id });
+      const allCompleted = allSiblings.every(t => t.completed);
+      
+      await Task.updateOne(
+        { _id: task.parentId, userId: session.user.id },
+        { completed: allCompleted }
+      );
+    }
+  }
+
   revalidatePath('/');
   revalidatePath('/tasks');
   revalidatePath('/calendar');
   revalidatePath('/inbox');
 }
+
 
 export async function updateTaskOrders(updates: { id: string, column: string, order: number }[]) {
   const session = await auth();

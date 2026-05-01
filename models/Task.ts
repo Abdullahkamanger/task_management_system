@@ -46,6 +46,11 @@ const TaskSchema = new mongoose.Schema({
     },
     dueDate: { 
         type: Date 
+    },
+    parentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Task',
+        default: null
     }
 },{timestamps:true});           
 

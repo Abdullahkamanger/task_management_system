@@ -50,14 +50,15 @@ export async function parseNaturalLanguageTask(input: string) {
 
   const prompt = `
     Extract task details from this sentence: "${input}".
-    The current date is ${new Date().toISOString()}.
+    The current date is ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}.
+    The current time is ${new Date().toLocaleTimeString('en-US', { hour12: false })}.
     
     Return ONLY a JSON object with:
     - title: (string)
     - description: (A detailed, step-by-step guide or efficiency tips for this task. If the user provided specific details, incorporate them. If the user only provided a title, generate a smart, actionable 3-4 step plan to complete this task effectively. Format it as a clear list.)
-    - dueDate: (ISO string or null if not mentioned)
+    - dueDate: (string "YYYY-MM-DD" or null if not mentioned)
     
-    If a relative time like "tomorrow" is mentioned, calculate the exact date based on the current date provided.
+    If a relative time like "tomorrow" or "next Friday" is mentioned, calculate the exact date based on the current date provided.
   `;
 
   try {

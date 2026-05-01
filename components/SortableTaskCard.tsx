@@ -3,7 +3,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import TaskCard from './TaskCard';
 
-export default function SortableTaskCard({ task }: { task: any }) {
+export default function SortableTaskCard({ task, allTasks }: { task: any, allTasks: any[] }) {
   const {
     attributes,
     listeners,
@@ -27,7 +27,7 @@ export default function SortableTaskCard({ task }: { task: any }) {
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="touch-none">
-      <TaskCard task={task} />
+      <TaskCard task={task} allTasks={allTasks} />
     </div>
   );
 }

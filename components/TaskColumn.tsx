@@ -17,6 +17,7 @@ type Task = {
   column: string;
   order: number;
   dueDate?: string;
+  parentId?: string | null;
 };
 
 type Column = {
@@ -24,7 +25,7 @@ type Column = {
   dueDate?: string;
 };
 
-export default function TaskColumn({ column, tasks }: { column: Column, tasks: Task[] }) {
+export default function TaskColumn({ column, tasks, allTasks }: { column: Column, tasks: Task[], allTasks: Task[] }) {
   const [isAdding, setIsAdding] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -154,9 +155,12 @@ export default function TaskColumn({ column, tasks }: { column: Column, tasks: T
       {/* Task List */}
       <div className="flex-1 space-y-3 overflow-y-auto custom-scrollbar pr-1 min-h-[100px] mb-4">
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
-          {tasks.map((task) => (
-            <SortableTaskCard key={task._id} task={task} />
-          ))}
+          {(() => {
+            const parents = tasks.filter(t => !t.parentId);
+            return parents.map((task) => (
+              <SortableTaskCard key={task._id} task={task} allTasks={allTasks} />
+            ));
+          })()}
         </SortableContext>
       </div>
 

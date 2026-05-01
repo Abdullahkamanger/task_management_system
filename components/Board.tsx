@@ -31,6 +31,7 @@ type Task = {
   column: string;
   order: number;
   dueDate?: string;
+  parentId?: string | null;
 };
 
 type Column = {
@@ -188,13 +189,17 @@ export default function Board({ initialColumns, initialTasks }: { initialColumns
       onDragEnd={handleDragEnd}
     >
       <div className="flex gap-6 h-full items-start pb-4">
-        {columns.map((col) => (
-          <TaskColumn
-            key={col.name}
-            column={col}
-            tasks={tasks.filter(t => t.column === col.name || (!t.column && col.name === 'To Do'))}
-          />
-        ))}
+        {columns.filter(col => col && col.name).map((col) => {
+          const columnTasks = tasks.filter(t => t.column === col.name || (!t.column && col.name === 'To Do'));
+          return (
+            <TaskColumn
+              key={col.name}
+              column={col}
+              tasks={columnTasks}
+              allTasks={tasks}
+            />
+          );
+        })}
         <AddColumn />
       </div>
 

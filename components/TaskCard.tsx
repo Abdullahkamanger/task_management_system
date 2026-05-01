@@ -6,16 +6,26 @@ import { useState, useTransition, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { deleteTask, updateTaskTitle, updateTaskDescription, toggleTaskComplete, createTask } from '@/lib/actions';
 import { generateSubtasks } from '@/lib/ai-actions';
-import { toast } from 'sonner'
+import { toast } from 'sonner';
+import TaskDetailModal from './TaskDetailModal';
 
 // components/TaskCard.tsx
-export default function TaskCard({ task }: { task: any }) {
+export default function TaskCard({ task, allTasks = [] }: { task: any, allTasks?: any[] }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [editingField, setEditingField] = useState<'title' | 'description' | null>(null);
   const [title, setTitle] = useState(task.title);
   const [description, setDescription] = useState(task.description || '');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const subtasks = allTasks.filter(t => {
+    const pId = t.parentId?.toString();
+    const currentId = task._id?.toString() || task.id?.toString();
+    return pId && currentId && pId === currentId;
+  });
+  const completedSubtasks = subtasks.filter(t => t.completed).length;
+  const isSubtask = !!task.parentId;
 
   async function handleAiBreakdown() {
     setIsGenerating(true);
@@ -34,6 +44,7 @@ export default function TaskCard({ task }: { task: any }) {
         formData.append('title', sub);
         formData.append('column', task.column);
         formData.append('description', `Sub-task for: ${task.title}`);
+        formData.append('parentId', task._id);
         await createTask(formData);
       }
       
@@ -98,11 +109,19 @@ export default function TaskCard({ task }: { task: any }) {
   };
 
   return (
+    <>
     <motion.div
       layout
       whileHover={{ y: -2 }}
-      className={`bg-[#22272b] p-4 rounded-lg shadow-md border ${task.completed ? 'border-green-500/30' : 'border-white/5 hover:border-white/20'} transition-all group`}
+      onClick={(e) => {
+        // Only open modal if not clicking an interactive element or editing
+        if (!editingField) {
+          setIsModalOpen(true);
+        }
+      }}
+      className={`bg-[#22272b] p-4 rounded-lg shadow-md border ${task.completed ? 'border-green-500/30' : 'border-white/5 hover:border-white/20'} transition-all group cursor-pointer relative`}
     >
+      
       <div className="flex items-start justify-between">
         <div className="flex-1">
           {/* Priority Tag */}
@@ -111,7 +130,14 @@ export default function TaskCard({ task }: { task: any }) {
           </div>
           
           <div className="flex gap-3">
-            <button onClick={handleToggle} disabled={isPending} className="mt-0.5 shrink-0">
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                handleToggle();
+              }} 
+              disabled={isPending} 
+              className="mt-0.5 shrink-0"
+            >
               {task.completed ? 
                 <CheckCircle2 size={18} className="text-green-500" /> : 
                 <Circle size={18} className="text-gray-500 hover:text-blue-400" />
@@ -129,12 +155,15 @@ export default function TaskCard({ task }: { task: any }) {
                   onKeyDown={(e) => { if (e.key === 'Enter') setEditingField(null); }}
                 />
               ) : (
-                <h3
-                  onClick={() => setEditingField('title')}
-                  className={`text-sm font-medium cursor-text hover:bg-white/5 rounded p-1 -ml-1 transition-colors ${task.completed ? 'line-through text-gray-500' : 'text-gray-100'}`}
-                >
-                  {title}
-                </h3>
+                <h3 
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditingField('title');
+              }}
+              className={`font-semibold text-gray-100 mb-1 cursor-text hover:text-blue-400 transition-colors ${task.completed ? 'line-through text-gray-500' : ''}`}
+            >
+              {title}
+            </h3>
               )}
 
               {/* Description */}
@@ -147,24 +176,56 @@ export default function TaskCard({ task }: { task: any }) {
                   onBlur={() => setEditingField(null)}
                 />
               ) : (
-                <p
-                  onClick={() => setEditingField('description')}
-                  className={`text-xs mt-2 line-clamp-2 cursor-text hover:bg-white/5 rounded p-1 -ml-1 transition-colors min-h-[24px] ${task.completed ? 'text-gray-600' : 'text-gray-500'}`}
-                >
-                  {description || 'Click to add a description...'}
-                </p>
+                <p 
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditingField('description');
+              }}
+              className="text-sm text-gray-400 line-clamp-2 cursor-text hover:text-gray-300 transition-colors"
+            >
+              {task.description || 'Click to add a description...'}
+            </p>
               )}
 
               {/* Due Date Badge */}
-              {task.dueDate && (
-                <div className={`mt-3 flex items-center gap-1.5 text-[10px] font-medium w-fit px-2 py-0.5 rounded ${
-                  new Date(task.dueDate) < new Date() && !task.completed
-                    ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
-                    : 'bg-white/5 text-gray-400 border border-white/10'
-                }`}>
-                  <CalendarIcon size={10} />
-                  {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                  {new Date(task.dueDate) < new Date() && !task.completed && " • Overdue"}
+              {task.dueDate && (() => {
+                const dueDate = new Date(task.dueDate);
+                const today = new Date();
+                dueDate.setHours(0, 0, 0, 0);
+                today.setHours(0, 0, 0, 0);
+                const isOverdue = dueDate < today && !task.completed;
+
+                return (
+                  <div className={`mt-3 flex items-center gap-1.5 text-[10px] font-medium w-fit px-2 py-0.5 rounded ${
+                    isOverdue
+                      ? 'bg-red-500/10 text-red-400 border border-red-500/20' 
+                      : 'bg-white/5 text-gray-400 border border-white/10'
+                  }`}>
+                    <CalendarIcon size={10} />
+                    {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    {isOverdue && " • Overdue"}
+                  </div>
+                );
+              })()}
+
+              {/* Subtasks Inline List */}
+              {subtasks.length > 0 && (
+                <div className="mt-3 space-y-1 bg-black/10 p-2 rounded-md border border-white/5">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">Subtasks</span>
+                    <span className="text-[10px] text-gray-500">{completedSubtasks}/{subtasks.length}</span>
+                  </div>
+                  {subtasks.slice(0, 3).map((sub: any) => (
+                    <div key={sub._id} className="flex items-center gap-2 text-xs">
+                      <CheckSquare size={12} className={sub.completed ? 'text-green-500' : 'text-gray-600'} />
+                      <span className={`truncate ${sub.completed ? 'line-through text-gray-600' : 'text-gray-400'}`}>
+                        {sub.title}
+                      </span>
+                    </div>
+                  ))}
+                  {subtasks.length > 3 && (
+                    <div className="text-[10px] text-gray-500 pl-5">+{subtasks.length - 3} more</div>
+                  )}
                 </div>
               )}
             </div>
@@ -172,7 +233,10 @@ export default function TaskCard({ task }: { task: any }) {
         </div>
         <div>
           <button
-            onClick={handleDelete}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete();
+            }}
             disabled={isPending}
             className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all text-gray-500 hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
           >
@@ -180,7 +244,10 @@ export default function TaskCard({ task }: { task: any }) {
           </button>
           
           <button 
-            onClick={handleAiBreakdown}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleAiBreakdown();
+            }}
             disabled={isGenerating || isPending}
             title="AI Breakdown"
             className={`mt-1 p-1.5 rounded-md flex items-center justify-center transition-all ${
@@ -194,5 +261,13 @@ export default function TaskCard({ task }: { task: any }) {
         </div>
       </div>
     </motion.div>
+
+    <TaskDetailModal 
+      task={task} 
+      subtasks={subtasks} 
+      isOpen={isModalOpen} 
+      onClose={() => setIsModalOpen(false)} 
+    />
+    </>
   );
-}
+}
