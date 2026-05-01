@@ -21,8 +21,8 @@ const menuItems = [
 ];
 
 const favorites = [
-  { label: 'Next.js Project', color: 'bg-blue-400' },
-  { label: 'MERN Migration', color: 'bg-purple-400' },
+  // { label: 'Next.js Project', color: 'bg-blue-400' },
+  // { label: 'MERN Migration', color: 'bg-purple-400' },
 ];
 
 export default function Sidebar({ user }: { user?: any }) {
@@ -60,24 +60,24 @@ export default function Sidebar({ user }: { user?: any }) {
         })}
 
         <div className="pt-8 pb-2 px-3">
-          <p className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">Favorites</p>
+          {/* <p className="text-[10px] uppercase font-bold text-gray-500 tracking-widest">Favorites</p> */}
         </div>
 
-        {favorites.map((fav) => (
+        {/* {favorites.map((fav) => (
           <button key={fav.label} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-white/5 transition-colors group">
             <div className={`w-2 h-2 rounded-full ${fav.color}`} />
             <span className="text-sm">{fav.label}</span>
             <Star size={14} className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
           </button>
-        ))}
+        ))} */}
       </nav>
 
       {/* Bottom Actions */}
       <div className="p-4 border-t border-white/5 space-y-1">
-        <button className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
+        {/* <button className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
           <Settings size={18} />
           <span className="text-sm">Settings</span>
-        </button>
+        </button> */}
         <button 
           onClick={() => signOut({ callbackUrl: '/login' })}
           className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition-colors"
